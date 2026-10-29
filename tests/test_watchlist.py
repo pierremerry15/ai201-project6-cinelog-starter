@@ -114,3 +114,30 @@ def test_get_watchlist_returns_newest_first(app, sample_user):
         # Blade Runner was added later, so it should come first.
         assert titles[0] == "Blade Runner"
         assert titles[1] == "Alien"
+
+
+# ── Default visibility ───────────────────────────────────────────────────────
+
+def test_add_to_watchlist_defaults_to_private(app, sample_user, sample_film):
+    """
+    A watchlist entry created without an explicit visibility should be
+    private. See pr-response.md (Comment 4) for the reasoning behind this
+    default.
+    """
+    with app.app_context():
+        entry = add_to_watchlist(user_id=sample_user, film_id=sample_film)
+
+        assert entry.public is False
+
+
+def test_add_to_watchlist_respects_explicit_public(app, sample_user, sample_film):
+    """
+    Callers can opt a watchlist entry into public visibility explicitly,
+    rather than depending on whatever the default happens to be.
+    """
+    with app.app_context():
+        entry = add_to_watchlist(
+            user_id=sample_user, film_id=sample_film, public=True
+        )
+
+        assert entry.public is True
