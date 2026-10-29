@@ -7,8 +7,10 @@ Endpoints for the watchlist feature.
 from flask import Blueprint, jsonify, request
 from services.watchlist_service import (
     add_to_watchlist,
+    remove_from_watchlist,
     get_watchlist,
     AlreadyInWatchlistError,
+    NotInWatchlistError,
 )
 from services.collection_service import FilmNotFoundError
 
@@ -17,7 +19,11 @@ watchlist_bp = Blueprint("watchlist", __name__)
 
 @watchlist_bp.route("/<user_id>", methods=["GET"])
 def view_watchlist(user_id):
-    """GET /watchlist/<user_id> — Return the user's watchlist."""
+    """
+    GET /watchlist/<user_id>
+
+    Returns the user's watchlist, sorted newest-first.
+    """
     films = get_watchlist(user_id)
     return jsonify(films)
 
@@ -44,3 +50,21 @@ def add_film(user_id):
         return jsonify({"error": str(e)}), 404
     except AlreadyInWatchlistError as e:
         return jsonify({"error": str(e)}), 409
+
+
+@watchlist_bp.route("/<user_id>/remove", methods=["DELETE"])
+def remove_film(user_id):
+    """
+    DELETE /watchlist/<user_id>/remove
+
+    Body: { "film_id": "<uuid>" }
+    """
+    data = request.get_json()
+    if not data or "film_id" not in data:
+        return jsonify({"error": "film_id is required"}), 400
+
+    try:
+        remove_from_watchlist(user_id=user_id, film_id=data["film_id"])
+        return jsonify({"message": "Removed from watchlist"}), 200
+    except NotInWatchlistError as e:
+        return jsonify({"error": str(e)}), 404

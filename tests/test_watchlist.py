@@ -12,7 +12,9 @@ from services.collection_service import FilmNotFoundError
 from services.watchlist_service import (
     get_watchlist,
     add_to_watchlist,
+    remove_from_watchlist,
     AlreadyInWatchlistError,
+    NotInWatchlistError,
 )
 
 
@@ -141,3 +143,31 @@ def test_add_to_watchlist_respects_explicit_public(app, sample_user, sample_film
         )
 
         assert entry.public is True
+
+
+# ── Removal ──────────────────────────────────────────────────────────────────
+
+def test_remove_from_watchlist_removes_entry(app, sample_user, sample_film):
+    """
+    Removing a film that is on the watchlist should delete the entry and
+    report success.
+    """
+    with app.app_context():
+        add_to_watchlist(user_id=sample_user, film_id=sample_film)
+
+        assert remove_from_watchlist(sample_user, sample_film) is True
+
+        remaining = WatchlistEntry.query.filter_by(
+            user_id=sample_user, film_id=sample_film
+        ).count()
+        assert remaining == 0
+
+
+def test_remove_from_watchlist_not_present_raises(app, sample_user, sample_film):
+    """
+    Removing a film that was never on the watchlist should raise
+    NotInWatchlistError, mirroring remove_from_collection's contract.
+    """
+    with app.app_context():
+        with pytest.raises(NotInWatchlistError):
+            remove_from_watchlist(sample_user, sample_film)
